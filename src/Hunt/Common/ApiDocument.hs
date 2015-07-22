@@ -15,6 +15,7 @@ import           Data.Text              (Text)
 import qualified Data.Text              as T
 
 import qualified Hunt.Common.DocDesc    as DD
+import           Hunt.Common.BasicTypes (Context, Content)
 
 -- | The document accepted by the interpreter and JSON API.
 
@@ -29,8 +30,6 @@ data ApiDocument  = ApiDocument
 -- | Score
 type Score = Float
 
-type Context      = Text
-type Content      = Text
 type Description  = DD.DocDesc
 
 -- | Context map

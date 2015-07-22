@@ -16,6 +16,8 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Lib, PackageInfo, Hunt.Common.DocDesc, Hunt.Common.ApiDocument
+                       , Hunt.Query.Language.Grammar
+                       , Hunt.Scoring.Score
   build-depends:       base >= 4.7 && < 5, containers, bytestring, text, binary, deepseq, unordered-containers, aeson, text-binary
   default-language:    Haskell2010
 

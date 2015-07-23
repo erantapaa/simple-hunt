@@ -8,15 +8,16 @@ where
 import           Control.Applicative          ((<$>))
 import           Control.DeepSeq              (NFData, rnf)
 
+import           Data.Aeson                   (encode)
 -- import           Data.Binary                  (Binary)
 -- import qualified Data.Binary                  as B
 -- import qualified Data.StringMap.Strict        as M
 import qualified Data.Text                    as T
 import           Data.Time                    (UTCTime)
 
--- import           Hayoo.Hunt.ApiDocument       (PkgDescr(PD), RankDescr, boringApiDoc, toApiDoc)
+import           Hayoo.Hunt.ApiDocument       (piToDescr)
 
-import           Hayoo.Hunt.IndexSchema       (-- appendSaveCmd,
+import           Hayoo.Hunt.IndexSchema       (appendSaveCmd,
                                                c'type, c'indexed, c'name, c'partial, c'upload,
                                                c'author, c'category, c'synopsis, c'description,
                                                c'dependencies,
@@ -25,6 +26,7 @@ import           Hayoo.Hunt.IndexSchema       (-- appendSaveCmd,
                                               )
 
 import           Hunt.ClientInterface          hiding (URI)
+import           Hunt.Common.ApiDocument       (ApiDocument)
 
 import           Control.Arrow                 ((***))
 -- import           Text.XML.HXT.Core             (IOSArrow, SysConfig, XmlTree, (***))
@@ -53,7 +55,6 @@ buildDocIndex now pkgName pkgInfo = LazyMap.fromList $
     add keyword words =  [ (keyword, Text.unwords words) ]
     parseWords str = filter (not . Text.null) $ Text.split (not . isLetter) (Text.pack str)
     now'  = fmtDateXmlSchema now
-    -- now'' = fmtDateHTTP      now
 
     upl = maybe "" id uplDate
         where
@@ -67,13 +68,11 @@ buildDocIndex now pkgName pkgInfo = LazyMap.fromList $
 
 toCommand :: Bool -> UTCTime -> Bool -> [(String, Maybe PackageInfo)] -> Command
 toCommand save now update pkgs
-      = deletePkgCmd
-{-
-        appendSaveCmd save now $
+      = appendSaveCmd save now $
         cmdSequence [ deletePkgCmd
-                    , cmdSequence . concatMap toCmd $ pkgs
+                    , cmdSequence . concatMap toCmd $ [ (pkgName, pkgInfo) | (pkgName, Just pkgInfo) <- pkgs ]
                     ]
--}
+
     where
       deletePkgCmd
           | update && not (null pkgs)
@@ -88,4 +87,14 @@ toCommand save now update pkgs
 
           | otherwise
               = cmdNOOP
+
+      toCmd (pkgName, pkgInfo) = insertCmd apiDoc
+          where 
+              insertCmd = (:[]) . cmdInsertDoc
+              apiDoc =  setDescription (piToDescr pkgInfo)
+                        . setIndex     indexMap 
+                        . setDocWeight 1.0
+                        $ mkApiDoc uri
+              uri = "http://hackage.haskell.org/package/aeson"
+              indexMap = buildDocIndex now pkgName pkgInfo
 

@@ -19,3 +19,6 @@ data PackageInfo
       }
     deriving (Show, Eq)
 
+defPackageRank :: Score
+defPackageRank = 1.0
+

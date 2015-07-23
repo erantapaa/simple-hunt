@@ -12,7 +12,8 @@ import           Data.Time              (UTCTime, formatTime, parseTime)
 -- import           Hayoo.Hunt.Output      (evalOkRes, outputValue)
 -- import           Hayoo.IndexConfig      -- TODO Hayoo.IndexConfig should import IndexSchema
                                         -- the names in IndexConfig correspond to name in this module
--- import           Hunt.ClientInterface
+import           Hunt.Interpreter.Command
+import           Hunt.ClientInterface
 import           System.Locale          (defaultTimeLocale)
 -- import           Data.String
 
@@ -66,7 +67,7 @@ cxToHuntCx cx
       , (pk'pkgname,      c'name)
       , (pk'synopsis,     c'synopsis)
       ]
--}
+--- end --- -}
 -- the descripion keys, most correspond 1-1 to context names
 
 d'author, d'category, d'dependencies, d'description, d'homepage, d'indexed,
@@ -168,17 +169,17 @@ fmtDate' fmt
 
 parseDateHTTP :: String -> Maybe UTCTime
 parseDateHTTP = parseTime defaultTimeLocale "%a %b %e %H:%M:%S %Z %Y"
-{-
+
 mkSaveCmd :: UTCTime -> Command
 mkSaveCmd now = cmdStoreIndex fn
           where
             fn = "hayoo-ix." ++ (unpack . fmtDateXmlSchema $ now)
+
 
 appendSaveCmd :: Bool -> UTCTime -> Command -> Command
 appendSaveCmd True now cmd
     = cmdSequence [cmd, mkSaveCmd now]
 appendSaveCmd False _ cmd
     = cmd
----end--- -}
 
 -- ------------------------------------------------------------

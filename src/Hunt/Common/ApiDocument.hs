@@ -16,6 +16,7 @@ import qualified Data.Text              as T
 
 import qualified Hunt.Common.DocDesc    as DD
 import           Hunt.Common.BasicTypes (Context, Content)
+import           Hunt.Scoring.Score     (Score, noScore, getScore, mkScore)
 
 -- | The document accepted by the interpreter and JSON API.
 
@@ -26,9 +27,6 @@ data ApiDocument  = ApiDocument
     , adWght  :: Score            -- ^ An optional document boost, (internal default is @1.0@).
     }
     deriving (Show)
-
--- | Score
-type Score = Float
 
 type Description  = DD.DocDesc
 
@@ -49,20 +47,6 @@ emptyApiDocDescr = DD.empty
 -- | Empty 'ApiDocument'.
 emptyApiDoc :: ApiDocument
 emptyApiDoc = ApiDocument "" emptyApiDocIndexMap emptyApiDocDescr noScore
-
-instance NFData ApiDocument where
-  --default
-
-noScore :: Score
-noScore = 0.0
-
-mkScore :: Score -> Score
-mkScore s = max 0 s
-
-getScore :: Score -> Maybe Score
-getScore s | s > 0     = Just s
-           | otherwise = Nothing
-
 
 instance FromJSON ApiDocument where
   parseJSON (Object o) = do

@@ -7,13 +7,13 @@ where
 -- import           Control.Monad.IO.Class (MonadIO)
 
 import           Data.Text              (Text, pack, unpack)
--- import           Data.Time              (UTCTime, formatTime, parseTime)
+import           Data.Time              (UTCTime, formatTime, parseTime)
 
 -- import           Hayoo.Hunt.Output      (evalOkRes, outputValue)
 -- import           Hayoo.IndexConfig      -- TODO Hayoo.IndexConfig should import IndexSchema
                                         -- the names in IndexConfig correspond to name in this module
 -- import           Hunt.ClientInterface
--- import           System.Locale          (defaultTimeLocale)
+import           System.Locale          (defaultTimeLocale)
 -- import           Data.String
 
 -- ------------------------------------------------------------
@@ -155,7 +155,7 @@ execDropHayooIndexSchema target
 
 ds :: ContextSchema
 ds  = setCxRegEx "\\w*" $ mkSchema
-
+-}
 fmtDateXmlSchema :: UTCTime -> Text
 fmtDateXmlSchema = fmtDate' "%FT%X"
 
@@ -168,7 +168,7 @@ fmtDate' fmt
 
 parseDateHTTP :: String -> Maybe UTCTime
 parseDateHTTP = parseTime defaultTimeLocale "%a %b %e %H:%M:%S %Z %Y"
-
+{-
 mkSaveCmd :: UTCTime -> Command
 mkSaveCmd now = cmdStoreIndex fn
           where

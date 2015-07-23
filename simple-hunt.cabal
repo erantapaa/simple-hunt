@@ -20,7 +20,12 @@ library
                        , Hunt.Query.Language.Grammar
                        , Hunt.Scoring.Score
                        , Hayoo.Hunt.IndexSchema
-  build-depends:       base >= 4.7 && < 5, containers, bytestring, text, binary, deepseq, unordered-containers, aeson, text-binary
+                       -- , PkgIndexerCore
+                       , Hunt.Interpreter.BasicCommand
+                       , Hunt.Interpreter.Command
+                       , Hunt.ClientInterface
+  build-depends:       base >= 4.7 && < 5, containers, bytestring, text, binary, deepseq, unordered-containers, aeson, text-binary, time,
+                       old-locale, data-default
   default-language:    Haskell2010
 
 executable simple-hunt-exe

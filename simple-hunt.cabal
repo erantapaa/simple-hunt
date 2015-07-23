@@ -20,7 +20,7 @@ library
                        , Hunt.Query.Language.Grammar
                        , Hunt.Scoring.Score
                        , Hayoo.Hunt.IndexSchema
-                       -- , PkgIndexerCore
+                       , PkgIndexerCore
                        , Hunt.Interpreter.BasicCommand
                        , Hunt.Interpreter.Command
                        , Hunt.ClientInterface

@@ -165,6 +165,8 @@ instance LogShow Command where
   logShow o = show o
 -}
 
+--- end --- -}
+
 -- ------------------------------------------------------------
 -- JSON instances
 -- ------------------------------------------------------------
@@ -191,7 +193,7 @@ instance ToJSON Command where
     Update d          -> object . cmd "update"         $ [ "document" .= d ]
     Delete u          -> object . cmd "delete"         $ [ "uri"      .= u ]
     DeleteByQuery q   -> object . cmd "delete-by-query"$ [ "query"    .= q ]
-    InsertContext c s -> object . cmd "insert-context" $ [ "context"  .= c, "schema" .= s ]
+    -- InsertContext c s -> object . cmd "insert-context" $ [ "context"  .= c, "schema" .= s ]
     DeleteContext c   -> object . cmd "delete-context" $ [ "context"  .= c ]
     LoadIx  f         -> object . cmd "load"           $ [ "path"     .= f ]
     StoreIx f         -> object . cmd "store"          $ [ "path"     .= f ]
@@ -200,6 +202,8 @@ instance ToJSON Command where
     Sequence cs       -> toJSON cs
     where
     cmd c = (:) ("cmd" .= (c :: Text))
+
+{-
 
 instance FromJSON Command where
   parseJSON (Object o) = do

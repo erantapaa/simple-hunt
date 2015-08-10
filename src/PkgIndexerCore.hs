@@ -38,6 +38,7 @@ import qualified Data.Map.Lazy                 as LazyMap
 import           PackageInfo                   (PackageInfo(..))
 import           Hunt.Query.Language.Builder
 import           Hunt.Interpreter.Command      (Command)
+import           Data.Monoid
 
 buildDocIndex :: UTCTime -> String -> PackageInfo -> H.IndexMap
 buildDocIndex now pkgName pkgInfo = LazyMap.fromList $ 
@@ -95,6 +96,6 @@ toCommand save now update pkgs
                         . setIndex     indexMap 
                         . setDocWeight 1.0
                         $ mkApiDoc uri
-              uri = "http://hackage.haskell.org/package/aeson"
+              uri = "http://hackage.haskell.org/package/" <> Text.pack pkgName
               indexMap = buildDocIndex now pkgName pkgInfo
 

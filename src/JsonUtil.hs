@@ -13,6 +13,8 @@ module JsonUtil
   , A.toJSON
   , A.Value(..)
   , A.object
+  , buildNOOP
+  , fullWord
   )
 where
 
@@ -72,3 +74,8 @@ type APair = (Text, A.Value)
 buildNOOP :: A.Value
 buildNOOP = A.object [ pair "cmd" ("noop" :: String) ]
 
+-- Build a case-fullword clause for a query.
+fullWord s = A.object [ pair "op"   ("case" :: String)
+                      , pair "type" ("fullword" :: String)
+                      , pair "word" s
+                      ]

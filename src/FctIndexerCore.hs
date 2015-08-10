@@ -4,7 +4,7 @@ where
 import           PackageInfo     (PackageInfo(..))
 import           Data.List       (intercalate)
 import           JsonUtil        (UTCTime, fmtDateXmlSchema, fmtDateHTTP
-                                 ,pair, APair, Value, toJSON, object)
+                                 ,pair, APair, Value, toJSON, object, fullWord)
 
 import           HoogleProcessLine (fixupSignature)
 import           Hayoo.ParseSignature (parseSignature, prettySignature, complexSignatures, subSignatures)
@@ -99,11 +99,7 @@ buildDelete pkgName =
   [ pair "cmd"  "delete-by-query"
   , pair "query" ( object [ pair "type"     "context"
                           , pair "contexts" [ "package" ]
-                          , pair "query"    (object [ pair "op"   "case"
-                                                    , pair "type" "fullword"
-                                                    , pair "word"  pkgName
-                                                    ]
-                                            )
+                          , pair "query"    (fullWord pkgName)
                           ]
                  )
   ]

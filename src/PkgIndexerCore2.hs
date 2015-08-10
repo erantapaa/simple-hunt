@@ -4,13 +4,12 @@ where
 import           PackageInfo     (PackageInfo(..))
 import           Data.List       (intercalate)
 import           JsonUtil        (UTCTime, fmtDateXmlSchema, fmtDateHTTP
-                                 ,pair, APair, Value, toJSON, object)
+                                 ,pair, APair, Value, toJSON, object, fullWord)
 
 -- | Build the index for a PackageInfo (except for the "indexed" value)
-buildIndexPairs :: String                       -- ^ Name of function / type / module / etc.
-                -> PackageInfo                  -- ^ FunctionInfo record
+buildIndexPairs :: PackageInfo                  -- ^ PackageInfo record
                 -> [APair]                      -- ^ Pairs comprising the index for this document
-buildIndexPairs pkgName pkgInfo = kvpairs
+buildIndexPairs pkgInfo = kvpairs
   where
     kvpairs =
       -- description, author, category, indexed, name, synopsis, type, dependencies
@@ -25,10 +24,9 @@ buildIndexPairs pkgName pkgInfo = kvpairs
 
 -- | Build the document component of an Insert command.
 buildDocument :: UTCTime         -- ^ The indexed time
-              -> String          -- ^ The function / method / type name
-              -> PackageInfo     -- ^ The FunctionInfo record
-              -> Value         -- ^ Document object (as JSON)
-buildDocument now pkgName pkgInfo =
+              -> PackageInfo     -- ^ The PackageInfo record
+              -> Value           -- ^ Document object (as JSON)
+buildDocument now pkgInfo =
   object  $
   [ pair "description"
          (object $ [ -- description, author, category, dependencies, indexed, maintainer, name, synopsis
@@ -51,7 +49,13 @@ buildDocument now pkgName pkgInfo =
     nowD     = toJSON $ fmtDateHTTP now       -- date formatted for the document
     nowI     = toJSON $ fmtDateXmlSchema now  -- date formatted for the index
     uri      = "http://hackage.haskell.org/package/" ++ (p_name pkgInfo)
-    index    = object $ [ pair "indexed" nowI ] ++ buildIndexPairs pkgName pkgInfo
+    index    = object $ [ pair "indexed" nowI ] ++ buildIndexPairs pkgInfo
+
+-- | Build the Insert command for a package.
+buildInsert now pkgInfo =
+  object $ [ pair "cmd"       "insert"
+           , pair "document"  (buildDocument now pkgInfo)
+           ]
 
 -- | Build the Delete command for a list of packages.
 buildDeletes :: [String] -> Value
@@ -71,13 +75,9 @@ buildDeletes pkgNames =
         arg2 = object [ pair "type"     "context"
                       , pair "contexts" [ "name" ]
                       , pair "query"    (object [ pair "args" (map fullWord pkgNames)
-                                                 , pair "op"   "or"
-                                                 , pair "type" "seq"
-                                                 ]
+                                                , pair "op"   "or"
+                                                , pair "type" "seq"
+                                                ]
                                         )
-                      ] 
-        fullWord s = object [ pair "op"   "case"
-                            , pair "type" "fullword"
-                            , pair "word" s
-                            ]
+                      ]
 

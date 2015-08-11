@@ -3,12 +3,12 @@
 module Process
 where
 
-import qualified PkgIndexerCore as PC
+import qualified PkgIndexerCore2 as PC
 import           PackageInfo (PackageInfo(..))
 import           ParseCabal (parseCabal)
 import           Pipes
 import qualified Pipes.Prelude as P
-import           TarUtil2 (ParsedEntry(..), pipesLatestPackages)
+import           TarUtil2 (ParsedEntry(..), cabalsInArchive, latestVersions)
 import qualified Data.Text.Lazy.Encoding as LE
 import qualified Data.Text.Lazy as LT
 import qualified JsonUtil as JS
@@ -17,8 +17,8 @@ import qualified JsonUtil as JS
 --   Returns the DAG and count of modules processed without any errors.
 processCabals :: (PackageInfo -> IO ()) -> FilePath -> IO ([(String, [String])], Int)
 processCabals emitCommand path = do
-  p <- pipesLatestPackages path
-  runEffect $ P.foldM go (return ([], 1)) return (p >-> for cat toPkgInfo)
+  cabals <- cabalsInArchive path
+  runEffect $ P.foldM go (return ([], 1)) return (latestVersions cabals >-> for cat toPkgInfo)
   where
     go st@(dag, !n) pkgInfo = do
       liftIO $ emitCommand pkgInfo
@@ -42,7 +42,7 @@ toPkgInfo (pkgName, pkgEntry) = do
 -- | Emit the command for a PackageInfo to a file.
 emitPkgInfo now prefix pkgInfo = do
   let pkgName = p_name pkgInfo
-      cmd = PC.toCommand False now True [(pkgName, Just pkgInfo)]
+      insertCommand = PC.buildInsert now pkgInfo
       path = prefix ++ pkgName ++ ".js"
-  JS.outputValue path cmd
+  JS.outputValue path insertCommand
 

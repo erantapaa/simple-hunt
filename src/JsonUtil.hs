@@ -5,6 +5,7 @@ module JsonUtil
   , jsonPutStr
   , hJsonPutStr
   , outputValue
+  , emitJsonList
   , UTCTime
   , fmtDateXmlSchema
   , fmtDateHTTP
@@ -14,10 +15,12 @@ module JsonUtil
   , A.Value(..)
   , A.object
   , buildNOOP
+  , buildUpdateWeight
   , fullWord
   )
 where
 
+import           Control.Monad
 import           Control.Exception          (bracket)
 import           Data.Aeson                 (ToJSON, encode)
 import qualified Data.Aeson                 as A (ToJSON, toJSON, object, Value(..))
@@ -54,6 +57,20 @@ hJsonPutStr pretty h c = jsonOutput pretty (LC.hPutStrLn h) c
 outputValue :: ToJSON c => FilePath -> c -> IO ()
 outputValue path c = bracket (openBinaryFile path WriteMode) hClose (\h -> hJsonPutStr True h c)
 
+-- | Emit a JSON list.
+emitJsonList :: Handle -> [ A.Value ] -> IO ()
+emitJsonList h []  = hPutStrLn h "[]"
+emitJsonList h [x] = do hPutStrLn h "["
+                        hJsonPutStr True h x
+                        hPutStrLn h "]"
+emitJsonList h (x:xs) = do
+  hPutStrLn h "["
+  hJsonPutStr True h x
+  forM_ xs $ \y -> do
+    hPutStrLn h ", "
+    hJsonPutStr True h y
+  hPutStrLn h "]"
+
 --- Command building utilities
 
 fmtDateXmlSchema :: UTCTime -> String
@@ -71,11 +88,21 @@ pair k v = (T.pack k, A.toJSON v)
 
 type APair = (Text, A.Value)
 
-buildNOOP :: A.Value
-buildNOOP = A.object [ pair "cmd" ("noop" :: String) ]
-
 -- Build a case-fullword clause for a query.
 fullWord s = A.object [ pair "op"   ("case" :: String)
                       , pair "type" ("fullword" :: String)
                       , pair "word" s
                       ]
+
+-- Build a NOOP command.
+buildNOOP :: A.Value
+buildNOOP = A.object [ pair "cmd" ("noop" :: String) ]
+
+-- Build an update weight command.
+buildUpdateWeight uri weight =
+  A.object [ pair "cmd"      ("update" :: String)
+           , pair "document" (A.object [ pair "uri"    uri
+                                       , pair "weight" weight
+                                       ]
+                             )
+          ]

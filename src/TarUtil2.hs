@@ -3,9 +3,8 @@
 module TarUtil2
   ( ParsedEntry(..)
   , TarException(..)
-  , pipesLatestPackages
-  , pipesTarEntries
-  , pipesSelectCabals
+  , cabalsInArchive
+  , latestVersions
   )
 where
 
@@ -31,7 +30,6 @@ import Pipes
 import Pipes.Group
 import qualified Pipes.Prelude as P
 import Control.Lens (view)
-
 
 data TarException = TarFormatError Tar.FormatError
   deriving (Show, Typeable)
@@ -110,19 +108,27 @@ pipesSelectCabals = forever $ do
      Nothing -> return ()
      Just r  -> yield (pe_package r, r)
 
+-- | Open a tar archive and return a stream of (String, ParsedEntry)
+--   of the .cabal files in the archive.
+cabalsInArchive path = do
+  entries <- tarEntriesForPath path 
+  return $ pipesTarEntries entries >-> pipesSelectCabals
+
+-- | Select only the latest versions in a stream of (String, ParsedEntry)
+latestVersions p = foldValues cmp p
+  where cmp old new = if (pe_version old < pe_version new) then new else old
+
 -- | Return a Producer of the latest packages in an index.tar.gz file.
 --   Assume that the packages names appear in sorted order.
 pipesLatestPackages :: Monad m => FilePath -> IO (Producer (String, ParsedEntry) m ())
 pipesLatestPackages path = do
-  entries <- tarEntriesForPath path 
-  return $ foldValues cmp  (pipesTarEntries entries >-> pipesSelectCabals)
-    where cmp old new = if (pe_version old < pe_version new) then new else old
+  cabals <- cabalsInArchive path
+  return $ latestVersions  cabals
 
 -- display the latest versions of each package in an index.tar.gz file
 test1 path = do
   p <- pipesLatestPackages path
-  runEffect $ p >-> showVersion
+  runEffect $ p >-> for cat (lift . showVersion)
   where
-    showVersion = forever $ do (pkgName, pkgEnt) <- await
-                               liftIO $ putStrLn $ pkgName ++ " " ++ show (pe_version pkgEnt)
+    showVersion (pkgName, pkgEnt) = putStrLn $ pkgName ++ " " ++ show (pe_version pkgEnt)
 

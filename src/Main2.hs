@@ -50,7 +50,7 @@ main3 = do
 -- | Print out packages which begin with "bytestring"
 main4 = do
   cabals <- cabalsInArchive "index.tar.gz"
-  runEffect $ cabals >-> P.filter go  >-> for cat (lift . print . fst) 
+  runEffect $ cabals >-> P.filter go  >-> for cat (lift . print . fst)
   where
     go (pkgName, parsedEntry) = isPrefixOf "bytestring" pkgName
 
@@ -72,7 +72,7 @@ main7 = do
   let body = cabals >-> counter >-> P.drain
   (_, n) <- runStateT (runEffect body) 10
   print n  -- number of cabal files seen
-  where 
+  where
     counter = forever doit
       where
         doit = do
@@ -150,4 +150,39 @@ main13 = do
     let cmds = [ J.buildUpdateWeight uri w | (pkgName, w) <- Map.assocs ranks,
                                              let uri = "http://hackage.haskell.org/package/" ++ pkgName ]
     J.emitJsonList h cmds
+
+-- Same as main13 except create a single 01-packages.js file.
+
+main14 = do
+  now <- getCurrentTime
+  cabals <- cabalsInArchive "index.tar.gz"
+  let pkgs = latestVersions cabals >-> for cat toPkgInfo
+      go (dag,pkgs) pkgInfo = do
+        let pkgName = p_name pkgInfo
+            depends = p_dependencies pkgInfo
+        return ((pkgName, depends):dag, pkgInfo:pkgs)
+  (dag, plist) <- runEffect $ P.foldM go (return ([],[])) return pkgs
+
+  let ranks = rankingStd dag
+      pkgnames = map p_name plist
+      deletes = PC.buildDeletes pkgnames
+      inserts = map (PC.buildInsert now) plist
+
+  -- emit 01-packages.js file
+  J.outputValue "json/01-packages.js" $ A.toJSON (deletes:inserts)
+  putStrLn "wrote json/01-packages.hs"
+
+  -- emit 02-ranking.js:
+  let updates = [ J.buildUpdateWeight uri w | (pkgName, w) <- Map.assocs ranks,
+                                              let uri = "http://hackage.haskell.org/package/" ++ pkgName ]
+  J.outputValue "json/02-ranking.js" $ A.toJSON updates
+  putStrLn "wrote json/02-ranking.js"
+
+{- another approach which avoids creating large Vectors in memory:
+
+  withBinaryFile "json/01-packages.js" WriteMode $ \h ->
+    J.emitJsonList h (deletes:inserts)
+  withBinaryFile "json/02-ranking.js" WriteMode $ \h ->
+    J.emitJsonList h updtes
+-}
 

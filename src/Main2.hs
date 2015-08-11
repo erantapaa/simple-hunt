@@ -6,7 +6,7 @@ where
 import Control.Monad
 import qualified Data.Map as Map
 import ProcessCabal (processCabals, toPkgInfo, emitPkgInfo)
-import TarUtil2 (ParsedEntry(..), cabalsInArchive, latestVersions)
+import TarUtil (ParsedEntry(..), cabalsInArchive, latestVersions)
 import PackageInfo
 import Hayoo.PackageRank (rankingStd)
 

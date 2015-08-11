@@ -8,7 +8,7 @@ import           PackageInfo (PackageInfo(..))
 import           ParseCabal (parseCabal)
 import           Pipes
 import qualified Pipes.Prelude as P
-import           TarUtil2 (ParsedEntry(..), cabalsInArchive, latestVersions)
+import           TarUtil (ParsedEntry(..), cabalsInArchive, latestVersions)
 import qualified Data.Text.Lazy.Encoding as LE
 import qualified Data.Text.Lazy as LT
 import qualified JsonUtil as JS

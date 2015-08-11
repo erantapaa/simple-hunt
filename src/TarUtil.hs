@@ -1,6 +1,6 @@
 {-# LANGUAGE NoMonomorphismRestriction, DeriveDataTypeable, MultiWayIf #-}
 
-module TarUtil2
+module TarUtil
   ( ParsedEntry(..)
   , TarException(..)
   , cabalsInArchive

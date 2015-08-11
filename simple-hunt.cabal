@@ -17,7 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     PackageInfo
                        , ParseCabal
-                       , TarUtil2
+                       , TarUtil
                        , Hayoo.PackageRank
                        , Hayoo.FunctionInfo
                        , ProcessCabal

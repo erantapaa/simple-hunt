@@ -15,29 +15,19 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
-                       , PackageInfo
-                       , Hunt.Common.DocDesc
-                       , Hunt.Common.ApiDocument
-                       , Hunt.Query.Language.Builder
-                       , Hunt.Query.Language.Grammar
-                       , Hunt.Scoring.Score
-                       , Hayoo.Hunt.IndexSchema
-                       , PkgIndexerCore
-                       , Hunt.Interpreter.BasicCommand
-                       , Hunt.Interpreter.Command
-                       , Hunt.ClientInterface
-                       , Hayoo.Hunt.ApiDocument
+  exposed-modules:     PackageInfo
                        , ParseCabal
-                       , TarUtil
-                       , Hayoo.PackageRank
-                       , Main2
                        , TarUtil2
-                       , Process
+                       , Hayoo.PackageRank
+                       , Hayoo.FunctionInfo
+                       , ProcessCabal
                        , JsonUtil
                        , PkgIndexerCore2
                        , FctIndexerCore
-                       , Hayoo.ParseSignature, HoogleProcessLine, ParseHoogle, Hayoo.FunctionInfo
+                       , Hayoo.ParseSignature
+                       , HoogleProcessLine
+                       , ParseHoogle
+                       , Main2
   build-depends:       base >= 4.7 && < 5, containers, bytestring, text, binary, deepseq,
                        unordered-containers, aeson, text-binary, time, old-locale, data-default, Cabal,
                        transformers, tar, zlib, bzlib, pipes, pipes-parse, pretty-show, pipes-group,

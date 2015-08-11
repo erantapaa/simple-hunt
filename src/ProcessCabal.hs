@@ -1,6 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 
-module Process
+module ProcessCabal
 where
 
 import qualified PkgIndexerCore2 as PC

@@ -8,8 +8,6 @@ module TarUtil2
   )
 where
 
-import TarUtil (ParsedEntry(..))
-
 import qualified Codec.Archive.Tar as Tar
 import qualified Codec.Archive.Tar.Entry as Tar
 import qualified Data.ByteString.Lazy as LBS
@@ -30,6 +28,14 @@ import Pipes
 import Pipes.Group
 import qualified Pipes.Prelude as P
 import Control.Lens (view)
+
+data ParsedEntry = ParsedEntry { pe_package   :: String
+                               , pe_version   :: V.Version
+                               , pe_cabalname :: String
+                               , pe_content   :: LBS.ByteString
+                               , pe_size      :: Tar.FileSize
+                               }
+  deriving (Show)
 
 data TarException = TarFormatError Tar.FormatError
   deriving (Show, Typeable)

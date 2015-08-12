@@ -10,6 +10,8 @@ import qualified Data.Text        as Text
 import qualified Data.Text.IO     as Text
 import           Data.Text           (Text)
 import qualified Data.Text.Encoding as Text
+import qualified Data.Text.Lazy.Encoding as DTLE
+import qualified Data.Text.Lazy as DTL
 
 import           Pipes
 import qualified Pipes.Prelude    as P
@@ -24,7 +26,7 @@ import qualified Text.Show.Pretty as PP
 
 import           Hayoo.FunctionInfo (Score, FunctionInfo(..))
 
-import qualified FctIndexerCore   as FJ
+import qualified FctIndexerCore   as FC
 import           Data.Time        (UTCTime, getCurrentTime)
 
 import           JsonUtil         (jsonPutStr, hJsonPutStr)
@@ -56,6 +58,13 @@ skipToPackage = do
 
 skipHeader path = byteLines path >-> skipToPackage
 
+-- Skip the header on a lazy bytestring.
+-- This is suitable for feeding into toHoogleLine.
+skipHeaderLBS lbs =
+  let pairs = zip [(1::Int)..] (LBS.lines lbs)
+      rest = dropWhile (\(i,x) -> not (LBS.isPrefixOf "@package" x)) pairs
+  in each $ map (\(i,x) -> (i, DTL.toStrict (DTLE.decodeUtf8 x))) rest
+
 -- convert a Text line into a Hoogle line
 toHoogleLine = forever $ do
   (lineno, txt)  <- await
@@ -81,26 +90,11 @@ emitCommaJson fh = for cat $ \x -> liftIO $ do { Text.hPutStrLn fh ","; hJsonPut
 -- Convert (fctName, fctInfo) to JSON commands
 toCommands scoreFn now = for cat $ \item@(fctName, fctInfo) -> do
   let score = scoreFn (package fctInfo)
-      cmds = FJ.buildInserts score now [ item ]
+      cmds = FC.buildInserts score now [ item ]
   each cmds
 
 -- Run a MonadState HState pipeline
 evalHState pipeline = evalStateT (runEffect pipeline) PL.emptyHState
-
-test1pipe path = skipHeader path >-> toHoogleLine >-> toFunctionInfo >-> P.drain
-test2pipe path = skipHeader path >-> toHoogleLine >-> toFunctionInfo >-> ppShowPipe
-test1 = evalHState . test1pipe
-test2 = evalHState . test2pipe
-test3 path = do
-  now <- getCurrentTime
-  evalHState $ skipHeader path >-> toHoogleLine >-> toFunctionInfo >-> toCommands (const $ Just 1.23) now >-> emitJsonStdout
-
-bar path now =  evalHState $ skipHeader path >-> toHoogleLine >-> toFunctionInfo
-                                  >-> toCommands (const $ Just 1.23) now >-> emitJsonStdout
-
-test4 path = do
-  count <- P.fold (\x _ -> x+1) 0 id (textLines path)
-  putStrLn $ path ++ ": " ++ show count
 
 data UriWeight = UriWeight { docUri :: String, docWeight :: Score }
 
@@ -119,4 +113,22 @@ readScores path = do
     Nothing   ->  return Nothing
     Just cmds ->  let m = Map.fromList [ (FP.takeBaseName u, w) | UriWeight u w <- cmds ]
                   in return (Just m)
+
+{-
+test1pipe path = skipHeader path >-> toHoogleLine >-> toFunctionInfo >-> P.drain
+test2pipe path = skipHeader path >-> toHoogleLine >-> toFunctionInfo >-> ppShowPipe
+test1 = evalHState . test1pipe
+test2 = evalHState . test2pipe
+test3 path = do
+  now <- getCurrentTime
+  evalHState $ skipHeader path >-> toHoogleLine >-> toFunctionInfo >-> toCommands (const $ Just 1.23) now >-> emitJsonStdout
+
+bar path now =  evalHState $ skipHeader path >-> toHoogleLine >-> toFunctionInfo
+                                  >-> toCommands (const $ Just 1.23) now >-> emitJsonStdout
+
+
+test4 path = do
+  count <- P.fold (\x _ -> x+1) 0 id (textLines path)
+  putStrLn $ path ++ ": " ++ show count
+-}
 

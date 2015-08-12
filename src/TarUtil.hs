@@ -5,6 +5,7 @@ module TarUtil
   , TarException(..)
   , cabalsInArchive
   , latestVersions
+  , pipesTarEntries
   )
 where
 

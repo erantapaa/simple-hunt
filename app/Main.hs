@@ -1,20 +1,11 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Main where
 
-import qualified Main2 as M2
+import qualified MainCabal as MC
+import qualified MainHoogle as MH
+import Data.Time.Clock (getCurrentTime)
 
-{-
-outputValue :: (ToJSON c) => String -> c -> IO ()
-outputValue fn c = jsonOutput True toFile c
-    where
-      toFile bs
-          = do createDirectoryIfMissing True dirPath
-               LB.writeFile file bs
-          where
-            (dirPath, _) = splitFileName file
-            file         = jsonPath fn
--}
-
-main = M2.main14
+main = do
+  MC.main "index.tar.gz"
+  now <- getCurrentTime
+  MH.processHoogleTarArchive "json/02-ranking.js" now True "hoogle.tar.gz"
 

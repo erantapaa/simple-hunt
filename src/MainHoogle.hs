@@ -16,7 +16,7 @@ import           System.FilePath
 import qualified Codec.Archive.Tar as Tar
 import           Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import           TarUtil (pipesTarEntries)
+import           TarUtil (tarEntriesForPath, pipesTarEntries)
 import qualified Data.Text as Text
 
 import Control.Monad.Trans.State.Strict
@@ -66,8 +66,8 @@ processHoogleFiles scorePath emitDeleteCmd paths = do
 processHoogleTarArchive scorePath now emitDeleteCmd path = do
   Just scoreMap <- readScores scorePath
   let scoreFn = \pkgName -> Map.lookup pkgName scoreMap
-  now <- getCurrentTime
-  runEffect $ pipesTarEntries path >-> for cat go1 >-> for cat (go2 scoreFn now)
+  entries <- tarEntriesForPath path
+  runEffect $ pipesTarEntries entries >-> for cat go1 >-> for cat (go2 scoreFn now)
   where
     go1 ent = do
       case parseTarEntry ent of
@@ -76,7 +76,7 @@ processHoogleTarArchive scorePath now emitDeleteCmd path = do
     go2 scoreFn now (pkgName, content) = lift $ do
       let jsonPath = "json/" ++ pkgName ++ ".js"
           deletes = if emitDeleteCmd then [ FC.buildDelete pkgName ] else []
-      withFile jsonPath WriteMode $ processHoogle scoreFn now deletes (skipHeaderLBS content)
+      liftIO $ withFile jsonPath WriteMode $ processHoogle scoreFn now deletes (skipHeaderLBS content)
 
 -- Select only normal files from a tar archive.
 parseTarEntry :: Tar.Entry -> Maybe (String, LBS.ByteString)
@@ -88,4 +88,8 @@ parseTarEntry ent = do
   where
     getNormalFileContent (Tar.NormalFile content len) = Just (content,len)
     getNormalFileContent _                            = Nothing
+
+main hoogleTarPath = do
+  now <- getCurrentTime
+  processHoogleTarArchive "json/02-ranking.js" now True hoogleTarPath
 

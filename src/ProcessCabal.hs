@@ -3,7 +3,7 @@
 module ProcessCabal
 where
 
-import qualified PkgIndexerCore2 as PC
+import qualified PkgIndexerCore as PC
 import           PackageInfo (PackageInfo(..))
 import           ParseCabal (parseCabal)
 import           Pipes

@@ -35,6 +35,8 @@ import           Data.Text                  (Text)
 import           Data.Time                  (UTCTime)
 import           Data.Time.Format           (formatTime)
 import           System.Locale              (defaultTimeLocale)
+import           System.Directory           (createDirectoryIfMissing)
+import           System.FilePath            (takeDirectory)
 
 jsonOutput :: (ToJSON c) => Bool -> (LB.ByteString -> IO a) -> c -> IO a
 jsonOutput pretty io x
@@ -54,8 +56,12 @@ jsonPutStr pretty c = jsonOutput pretty LC.putStrLn c
 
 hJsonPutStr pretty h c = jsonOutput pretty (LC.hPutStrLn h) c
 
-outputValue :: ToJSON c => FilePath -> c -> IO ()
-outputValue path c = bracket (openBinaryFile path WriteMode) hClose (\h -> hJsonPutStr True h c)
+-- Output a JSON value to a file. Create the parent directory if necessary.
+outputValue :: ToJSON c => String -> c -> IO ()
+outputValue path c = do
+  let dirPath = takeDirectory path
+  createDirectoryIfMissing True dirPath
+  bracket (openBinaryFile path WriteMode) hClose (\h -> hJsonPutStr True h c)
 
 -- | Emit a JSON list.
 emitJsonList :: Handle -> [ A.Value ] -> IO ()

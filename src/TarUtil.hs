@@ -6,6 +6,7 @@ module TarUtil
   , cabalsInArchive
   , latestVersions
   , pipesTarEntries
+  , tarEntriesForPath
   )
 where
 

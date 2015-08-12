@@ -1,4 +1,4 @@
-module PkgIndexerCore2
+module PkgIndexerCore
 where
 
 import           PackageInfo     (PackageInfo(..))

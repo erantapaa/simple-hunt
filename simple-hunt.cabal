@@ -16,21 +16,21 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     PackageInfo
-                       , ParseCabal
                        , TarUtil
+                       , JsonUtil
                        , Hayoo.PackageRank
                        , Hayoo.FunctionInfo
-                       , ProcessCabal
-                       , JsonUtil
-                       , PkgIndexerCore2
-                       , FctIndexerCore
                        , Hayoo.ParseSignature
+                       , PkgIndexerCore
+                       , FctIndexerCore
                        , HoogleProcessLine
+                       , ParseCabal
+                       , ProcessCabal
                        , ParseHoogle
-                       , Main2
                        , TestHoogle
                        , ProcessHoogle
                        , ProcessLine
+                       , MainCabal
                        , MainHoogle
   build-depends:       base >= 4.7 && < 5, containers, bytestring, text, binary, deepseq,
                        unordered-containers, aeson, text-binary, time, old-locale, data-default, Cabal,

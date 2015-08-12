@@ -1,6 +1,6 @@
 {-# LANGUAGE NoMonomorphismRestriction #-}
 
-module Main2
+module MainCabal
 where
 
 import Control.Monad
@@ -23,7 +23,7 @@ import Data.Time.Clock (getCurrentTime)
 import System.IO
 
 import qualified JsonUtil as J
-import qualified PkgIndexerCore2 as PC
+import qualified PkgIndexerCore as PC
 import qualified Data.Aeson as A
 
 ignore pkgInfo = return ()
@@ -152,10 +152,9 @@ main13 = do
     J.emitJsonList h cmds
 
 -- Same as main13 except create a single 01-packages.js file.
-
-main14 = do
+main indexTarPath = do
   now <- getCurrentTime
-  cabals <- cabalsInArchive "index.tar.gz"
+  cabals <- cabalsInArchive indexTarPath
   let pkgs = latestVersions cabals >-> for cat toPkgInfo
       go (dag,pkgs) pkgInfo = do
         let pkgName = p_name pkgInfo
@@ -178,7 +177,7 @@ main14 = do
   J.outputValue "json/02-ranking.js" $ A.toJSON updates
   putStrLn "wrote json/02-ranking.js"
 
-{- another approach which avoids creating large Vectors in memory:
+{- another approach which perhaps avoids creating large Vectors in memory:
 
   withBinaryFile "json/01-packages.js" WriteMode $ \h ->
     J.emitJsonList h (deletes:inserts)

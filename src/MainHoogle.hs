@@ -3,36 +3,41 @@
 module MainHoogle where
 
 import           Control.Monad
-import qualified Data.Map         as Map
-import           Data.Time.Clock  (getCurrentTime)
-import           ProcessHoogle    (skipHeader, skipHeaderLBS, evalHState, toHoogleLine, toCommands, emitCommaJson, toFunctionInfo, readScores)
-import qualified ProcessLine      as PL
-import qualified FctIndexerCore   as FC
-import qualified JsonUtil         as J
-import qualified Pipes            as P
-import qualified Pipes.Group      as PG
-import qualified Pipes.Prelude    as P
-import           Pipes            ((>->), for, cat, liftIO, yield, runEffect, MonadIO, Producer, lift)
-import           Control.Lens     (view, zoom, (^.))
+import qualified Data.Map           as Map
+import           Data.Time.Clock    (getCurrentTime)
+import           ProcessHoogle      (skipHeader, skipHeaderLBS, evalHState, toHoogleLine, toCommands, emitCommaJson, toFunctionInfo, readScores)
+import qualified FctIndexerCore     as FC
+import           Hayoo.FunctionInfo (FunctionInfo(..))
+import qualified JsonUtil           as J
+
+import           Pipes
+import qualified Pipes.Group        as PG
+import qualified Pipes.Prelude      as P
+import qualified Pipes.Parse        as PP
+import qualified Pipes.Lift         as PL
+
+import qualified Data.Set           as Set
+
+import           Control.Lens       (view, zoom, (^.))
+
 import           System.IO
 import           System.Directory
 import           System.FilePath
-import qualified Codec.Archive.Tar as Tar
-import           Data.ByteString (ByteString)
+
+import qualified Codec.Archive.Tar  as Tar
+import           TarUtil            (tarEntriesForPath, pipesTarEntries)
+
+import           Data.ByteString    (ByteString)
 import qualified Data.ByteString.Lazy.Char8 as LBS
-import           TarUtil (tarEntriesForPath, pipesTarEntries)
-import qualified Data.Text as Text
+import qualified Data.Text          as Text
 
-import Control.Monad.Trans.State.Strict
-import qualified Control.Monad.Trans.State.Strict as S
+import Control.Monad.State.Strict
 
-import qualified Pipes.Parse as PP
+type LinesProducer = MonadIO m => Producer (Int, Text.Text) m ()
 
 checkFileExists path = do
   ok <- doesFileExist path
   when (not ok) $ error $ "file does not exist: " ++ path
-
-type LinesProducer = MonadIO m => Producer (Int, Text.Text) m ()
 
 -- process a Hoogle file represetned as stream of strict ByteStrings.
 
@@ -63,6 +68,7 @@ processHoogle' scoreFn now linesStream fh = do
   evalHState $ linesStream
                  >-> toHoogleLine
                  >-> toFunctionInfo
+                 >-> removeDupURIs
                  >-> toCommands scoreFn now
                  >-> emitCommaJson fh
 
@@ -107,11 +113,22 @@ parseTarEntry ent = do
     getNormalFileContent (Tar.NormalFile content len) = Just (content,len)
     getNormalFileContent _                            = Nothing
 
--- return a producer which emits tar entries of normal files
+-- return a producer which emits tar entries for just normal files
 filesInTarArchive path = do
   entries <- tarEntriesForPath path
   return $ pipesTarEntries entries >-> for cat onlyFiles
     where onlyFiles = maybe (return ()) yield . parseTarEntry
+
+-- filter out FunctionInfo records with the same docURI.
+
+removeDupURIs = PL.evalStateP Set.empty (for cat go)
+  where go item@(name, fi) = do
+          seen <- get
+          let uri = docURI fi
+          if Set.member uri seen
+            then return ()
+            else do put (Set.insert uri seen)
+                    yield item
 
 mapParserGroups nextProducer run = loop (1::Int)
  where
@@ -119,10 +136,10 @@ mapParserGroups nextProducer run = loop (1::Int)
      end <- PP.isEndOfInput
      if end
        then return ()
-       else do s <- S.get
+       else do s <- get
                let x = s ^. nextProducer
                y <- lift $ run n x
-               S.put y
+               put y
                loop (n+1)
 
 processHoogleBatched scoreFn now batchSize hoogleTarPath = do

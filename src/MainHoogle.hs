@@ -139,13 +139,11 @@ processFileStream scoreFn now n x = do
         --- emit the delete command
         let deleteCmd = FC.buildDelete pkgName
         lift $ do putStrLn $ " - " ++ pkgName
-                  hPutStrLn h ","
                   J.hJsonPutStr True h deleteCmd
                   processHoogle' scoreFn now (skipHeaderLBS content) h
 
   withFile out WriteMode $ \h -> do
     hPutStrLn h "["
-    J.hJsonPutStr True h J.buildNOOP
     y <- runEffect $ (x >-> for cat (go h))   -- process the batch
     hPutStrLn h "]"
     return y

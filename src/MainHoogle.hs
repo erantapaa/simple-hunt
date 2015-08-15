@@ -1,15 +1,19 @@
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE Rank2Types, NoMonomorphismRestriction #-}
 
 module MainHoogle where
 
 import           Control.Monad
 import qualified Data.Map         as Map
-import           Data.Time.Clock (getCurrentTime)
-import           ProcessHoogle  (skipHeader, skipHeaderLBS, evalHState, toHoogleLine, toCommands, emitCommaJson, toFunctionInfo, readScores)
+import           Data.Time.Clock  (getCurrentTime)
+import           ProcessHoogle    (skipHeader, skipHeaderLBS, evalHState, toHoogleLine, toCommands, emitCommaJson, toFunctionInfo, readScores)
 import qualified ProcessLine      as PL
 import qualified FctIndexerCore   as FC
 import qualified JsonUtil         as J
-import           Pipes
+import qualified Pipes            as P
+import qualified Pipes.Group      as PG
+import qualified Pipes.Prelude    as P
+import           Pipes            ((>->), for, cat, liftIO, yield, runEffect, MonadIO, Producer, lift)
+import           Control.Lens     (view, zoom, (^.))
 import           System.IO
 import           System.Directory
 import           System.FilePath
@@ -20,7 +24,10 @@ import           TarUtil (tarEntriesForPath, pipesTarEntries)
 import qualified Data.Text as Text
 
 import Control.Monad.Trans.State.Strict
- 
+import qualified Control.Monad.Trans.State.Strict as S
+
+import qualified Pipes.Parse as PP
+
 checkFileExists path = do
   ok <- doesFileExist path
   when (not ok) $ error $ "file does not exist: " ++ path
@@ -47,6 +54,17 @@ processHoogle scoreFn now deleteCmds linesStream fh = do
                  >-> emitCommaJson fh
   hPutStrLn fh "]"
 
+processHoogle' :: (String -> Maybe Float)   -- ^ Score function
+               -> J.UTCTime                 -- ^ Index time
+               -> LinesProducer             -- ^ Lines of the hoogle file
+               -> Handle                    -- ^ Output file handle
+               -> IO ()
+processHoogle' scoreFn now linesStream fh = do
+  evalHState $ linesStream
+                 >-> toHoogleLine
+                 >-> toFunctionInfo
+                 >-> toCommands scoreFn now
+                 >-> emitCommaJson fh
 
 -- process a list of Hoogle files
 processHoogleFiles :: FilePath -> Bool -> [FilePath] -> IO ()
@@ -89,7 +107,66 @@ parseTarEntry ent = do
     getNormalFileContent (Tar.NormalFile content len) = Just (content,len)
     getNormalFileContent _                            = Nothing
 
-main hoogleTarPath = do
+-- return a producer which emits tar entries of normal files
+filesInTarArchive path = do
+  entries <- tarEntriesForPath path
+  return $ pipesTarEntries entries >-> for cat onlyFiles
+    where onlyFiles = maybe (return ()) yield . parseTarEntry
+
+mapParserGroups nextProducer run = loop (1::Int)
+ where
+   loop n = do
+     end <- PP.isEndOfInput
+     if end
+       then return ()
+       else do s <- S.get
+               let x = s ^. nextProducer
+               y <- lift $ run n x
+               S.put y
+               loop (n+1)
+
+processHoogleBatched scoreFn now batchSize hoogleTarPath = do
+  files <- filesInTarArchive hoogleTarPath
+  let nextProducer = PP.splitAt batchSize
+      run          = processFileStream scoreFn now
+  evalStateT (mapParserGroups nextProducer run) files
+
+processFileStream scoreFn now n x = do
+  let out = "json/batch-" ++ show n ++ ".js"
+  putStrLn $ "writing to " ++ out
+
+  let go h (pkgName,content) = do
+        --- emit the delete command
+        let deleteCmd = FC.buildDelete pkgName
+        lift $ do putStrLn $ " - " ++ pkgName
+                  hPutStrLn h ","
+                  J.hJsonPutStr True h deleteCmd
+                  processHoogle' scoreFn now (skipHeaderLBS content) h
+
+  withFile out WriteMode $ \h -> do
+    hPutStrLn h "["
+    J.hJsonPutStr True h J.buildNOOP
+    y <- runEffect $ (x >-> for cat (go h))   -- process the batch
+    hPutStrLn h "]"
+    return y
+
+noBuffering = hSetBuffering stdout NoBuffering
+
+test6 = do
+  noBuffering
+  let scorePath = "json/02-ranking.js"
   now <- getCurrentTime
-  processHoogleTarArchive "json/02-ranking.js" now True hoogleTarPath
+  Just scoreMap <- readScores scorePath
+  let scoreFn = \pkgName -> Map.lookup pkgName scoreMap
+  processHoogleBatched scoreFn now 20 "hoogle.tar.gz"
+
+main hoogleTarPath = do
+  let scorePath = "json/02-ranking.js"
+      hooglePath = "hoogle.tar.gz"
+      batchSize = 20
+  noBuffering
+  now <- getCurrentTime
+  Just scoreMap <- readScores scorePath
+  let scoreFn = \pkgName -> Map.lookup pkgName scoreMap
+  processHoogleBatched scoreFn now batchSize hooglePath
 

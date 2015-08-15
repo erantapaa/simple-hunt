@@ -7,6 +7,8 @@ where
 import           Control.Monad
 import           Pipes
 import qualified Pipes.Prelude        as P
+import qualified Pipes.Lift           as PL
+import qualified Data.Set             as Set
 import           Text.Show.Pretty
 import           ProcessHoogle
 import           ProcessLine          (fixupSignature)
@@ -24,6 +26,7 @@ import           Data.Either
 import qualified Data.Map             as M
 import           System.IO
 import           System.FilePath
+import           Hayoo.FunctionInfo   (FunctionInfo(..))
 import           FctIndexerCore       (buildDelete)
 import           JsonUtil             (hJsonPutStr, buildNOOP)
 
@@ -104,6 +107,16 @@ processHoogleFiles scorePath emitDeleteCmd paths = do
     putStrLn $ "processing " ++ path
     processHoogleFile scoreFn now emitDeleteCmd path
 
+-- filter out FunctionInfo records with the same docURI.
+removeDupURIs = PL.evalStateP Set.empty (for cat go)
+  where go item@(name, fi) = do
+          seen <- get
+          let uri = docURI fi
+          if Set.member uri seen
+            then return ()
+            else do put (Set.insert uri seen)
+                    yield item
+
 processHoogleFile scoreFn now emitDeleteCmd path = do
   let pkgName = dropExtension $ takeBaseName path
       jsonPath = "json/" ++ pkgName ++ ".js"
@@ -115,6 +128,7 @@ processHoogleFile scoreFn now emitDeleteCmd path = do
   evalHState $ skipHeader path
                  >-> toHoogleLine 
                  >-> toFunctionInfo
+                 >-> removeDupURIs
                  >-> toCommands scoreFn now
                  >-> emitCommaJson fh
   hPutStrLn fh "]"
